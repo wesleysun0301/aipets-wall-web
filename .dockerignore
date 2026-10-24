@@ -1,0 +1,8 @@
+.git
+password.txt
+public-url.txt
+wall_deploy_key
+wall_deploy_key.pub
+host-secrets.txt
+__pycache__
+*.json.tmp

@@ -1,0 +1,211 @@
+{
+  "brief": [
+    "本屆競賽以 AI for Pets 為主題，徵求 AI 貓犬照護創新提案。",
+    "請選擇四大挑戰主題之一，針對貓犬健康、照護、收容、領養或配對等真實需求，提出具創新性、可實作性與應用潛力的 AI 服務、系統、平台或 App。"
+  ],
+  "themes": [
+    {
+      "id": "care",
+      "label": "照護",
+      "full": "照護｜獸醫照護",
+      "en": "Veterinary Care｜獸醫照護",
+      "blurb": "用 AI 讓每次照護更安心",
+      "direction": "從獸醫診療、就醫前後資訊整理、健康狀況判讀輔助、飼主溝通與診療後照護延伸思考",
+      "example": "協助整理問診資訊、判讀影像與健康數據，提醒照護追蹤，並依診療與健康狀況提供營養及照護建議。"
+    },
+    {
+      "id": "daily",
+      "label": "日常",
+      "full": "日常｜預防保健",
+      "en": "Preventive Pet Care｜預防保健",
+      "blurb": "用 AI 數據更了解牠",
+      "direction": "從貓犬日常生活中的健康管理、行為觀察、年齡階段照護與預防保健切入。",
+      "example": "透過日常記錄、影像或穿戴裝置等資料，協助及早發現異常行為與健康風險，並提供個人化營養與照護建議。"
+    },
+    {
+      "id": "shelter",
+      "label": "收容",
+      "full": "收容｜流浪動物福利",
+      "en": "Stray Animal Welfare｜流浪動物福利",
+      "blurb": "用 AI 科技給流浪更好未來",
+      "direction": "從流浪動物管理、收容環境改善、照護資源分配、健康追蹤與送養速率提升切入。",
+      "example": "協助辨識與追蹤流浪動物，優化收容照護流程，評估健康與行為狀況，並提供送養及照護資源建議。"
+    },
+    {
+      "id": "owner",
+      "label": "相遇",
+      "full": "相遇｜負責任的飼主",
+      "en": "Responsible Pet Ownership｜負責任的飼主",
+      "blurb": "用 AI 支持終養不棄養",
+      "direction": "從飼養前評估、責任教育、生活變動因應，到終養支持與棄養風險預防切入。",
+      "example": "評估飼主的時間、經濟、居住與家庭條件，協助建立飼養承諾及變故應對方案，實踐終養不棄養。"
+    }
+  ],
+  "shortlist": ["seven-night", "promise-move"],
+  "sparks": [
+    {"id": "seven-night", "theme": "daily", "clock": "週日 21:40", "place": "沙發前的茶几", "picture": "茶几上攤著七張餵食紀錄。他的手指停在今晚那張，旁邊的碗還是滿的。週三那張下面畫了一個空碗。", "stickers": ["bowl", "note", "clock"]},
+    {"id": "promise-move", "theme": "owner", "clock": "週日 16:40", "place": "廚房流理台", "picture": "手機開著搬家群組，訊息還沒送出。流理台並著兩隻碗，他拿著筆，餵食表「誰負責」那欄是空白。", "stickers": ["phone", "cat", "note"]},
+    {"id": "clinic-ask", "theme": "care", "clock": "週三 14:20", "place": "診所候診椅", "picture": "獸醫問「這週怎麼樣」。他把記事本轉過去，本子上只有一行：好像有點沒精神。", "stickers": ["person", "phone", "clinic"]},
+    {"id": "after-visit", "theme": "care", "clock": "週四 19:05", "place": "家裡餐桌", "picture": "餐桌攤開三張診所說明。他拿起印著「明天早上」的藥袋，另外兩張還疊在一起。", "stickers": ["note", "table", "person"]},
+    {"id": "night-vomit", "theme": "care", "clock": "週日 02:16", "place": "浴室地板", "picture": "浴室地板有一灘貓吐的東西。他蹲著，一手開著手機相機，一手拉著外套拉链。", "stickers": ["cat", "phone", "night"]},
+    {"id": "full-bowl", "theme": "daily", "clock": "週日 21:40", "place": "家裡玄關", "picture": "行李箱還站在玄關。自動餵食器的碗是滿的，螢幕停在「上次出糧：週四 07:00」。", "stickers": ["bowl", "door", "clock"]},
+    {"id": "stairs", "theme": "daily", "clock": "週二 07:50", "place": "樓梯第三階", "picture": "老狗停在第三階，前腳沒抬起來。他站在樓下，手機螢幕是昨天同一階的照片。", "stickers": ["dog", "stairs", "person"]},
+    {"id": "litter", "theme": "daily", "clock": "週六 08:05", "place": "貓砂盆旁", "picture": "貓砂是乾的，貓坐在盆外的地墊上。他手裡拿著剛拆封的貓砂袋。", "stickers": ["cat", "note", "person"]},
+    {"id": "eight-min", "theme": "shelter", "clock": "週六 11:12", "place": "送養會桌子", "picture": "準飼主站在桌前。五張便利貼散在這隻貓的資料夾上，志工看著手錶，剩下八分鐘。", "stickers": ["note", "cat", "person"]},
+    {"id": "shift", "theme": "shelter", "clock": "週一 08:00", "place": "收容所籠前", "picture": "交接本翻到這籠，只寫著「怕大聲」。接班的人站在籠門前，籠牌上沒有寫是關門聲還是狗叫聲。", "stickers": ["cage", "note", "person"]},
+    {"id": "chew", "theme": "shelter", "clock": "週六 15:02", "place": "面談椅", "picture": "準飼主指著狗問「他會拆家嗎」。志工翻開紀錄，夾著一張被咬爛的拖鞋照片，照片上沒有日期。", "stickers": ["dog", "person", "note"]},
+    {"id": "seventy-two", "theme": "owner", "clock": "週六 01:10", "place": "床邊地板", "picture": "貓縮在床底，床邊那隻碗是滿的。他坐在地板上，手機搜尋框裡打著「是不是生病」。", "stickers": ["cat", "bed", "search"]},
+    {"id": "lease", "theme": "owner", "clock": "週日 16:30", "place": "客廳沙發", "picture": "貓坐在他腿上。手機停在給房東的草稿「可以養寵物嗎」，傳送鍵還沒按。", "stickers": ["phone", "cat", "door"]},
+    {"id": "temp-care", "theme": "owner", "clock": "週三 22:18", "place": "餐桌", "picture": "手機停在朋友傳來的「不然先幫你養一週」。桌上兩隻空碗，旁邊的便條只寫了日期。", "stickers": ["phone", "bowl", "person"]}
+  ],
+  "people": [
+    {"id": "first", "label": "第一次把動物接回家的人", "pattern": "第一次", "hint": "這個人的句子裡要有「第一次」。"},
+    {"id": "kid", "label": "家裡有幼兒的人", "pattern": "幼兒|小孩|孩子", "hint": "寫到「幼兒」「小孩」或「孩子」。"},
+    {"id": "solo", "label": "獨居上班族", "pattern": "獨居|上班", "hint": "寫到「獨居」或「上班」。"},
+    {"id": "vol", "label": "正在值班的收容志工", "pattern": "志工|值班", "hint": "寫到「志工」或「值班」。"},
+    {"id": "wait", "label": "坐在候診椅上的人", "pattern": "候診", "hint": "寫到「候診」。"},
+    {"id": "shift", "label": "剛接班的人", "pattern": "接班", "hint": "寫到「接班」。"}
+  ],
+  "times": [
+    {"id": "dawn", "label": "清晨 6:10", "pattern": "清晨|6:10|6：10|六點", "hint": "時間裡要有「清晨」「6:10」或「六點」。"},
+    {"id": "commute", "label": "通勤路上", "pattern": "通勤", "hint": "時間地點裡要有「通勤」。"},
+    {"id": "lunch", "label": "午休", "pattern": "午休", "hint": "時間地點裡要有「午休」。"},
+    {"id": "door", "label": "下班進門那一刻", "pattern": "進門|下班", "hint": "寫到「進門」或「下班」。"},
+    {"id": "eleven", "label": "晚上 11 點", "pattern": "11|十一", "hint": "時間裡要有「11」或「十一」。"},
+    {"id": "two", "label": "凌晨 2 點", "pattern": "凌晨|兩點", "hint": "寫到「凌晨」或「兩點」。"}
+  ],
+  "constraints": [
+    {"id": "phone", "label": "手邊只有手機", "hint": "在時間地點，或他正在做的事裡，寫到「手機」。", "fields": ["whenWhere", "behavior"], "require": [{"fields": ["whenWhere", "behavior"], "pattern": "手機"}]},
+    {"id": "ninety", "label": "整件事不超過 90 秒", "hint": "在時間或那十秒裡寫到「90秒」或「一分半」。", "fields": ["whenWhere", "incident"], "require": [{"fields": ["whenWhere", "incident"], "pattern": "90\\s*秒|一分半"}]},
+    {"id": "onePet", "label": "畫面上只有一隻動物", "hint": "寫成「這隻」或「只有一隻」。", "fields": ["who", "incident"], "require": [{"fields": ["who", "incident"], "pattern": "這隻|只有一隻|這一隻"}]},
+    {"id": "tonight", "label": "只發生在今晚", "hint": "時間地點裡要出現「今晚」。", "fields": ["whenWhere"], "require": [{"fields": ["whenWhere"], "pattern": "今晚"}]},
+    {"id": "notes", "label": "已知的資訊只在便利貼上", "hint": "在剛發生的事，或他正在做的事裡，寫到「便利貼」。", "fields": ["incident", "behavior"], "require": [{"fields": ["incident", "behavior"], "pattern": "便利貼"}]},
+    {"id": "nosearch", "label": "他正想搜尋，但結果不是搜尋頁", "hint": "他正在做的事要出現「搜尋」。回覆裡不要再寫搜尋。", "fields": ["behavior", "output"], "require": [{"fields": ["behavior"], "pattern": "搜尋"}], "forbid": [{"fields": ["output"], "pattern": "搜尋"}]}
+  ],
+  "stickers": [
+    {"id": "person", "label": "人"},
+    {"id": "cat", "label": "貓"},
+    {"id": "dog", "label": "狗"},
+    {"id": "phone", "label": "手機"},
+    {"id": "clock", "label": "時鐘"},
+    {"id": "bed", "label": "床"},
+    {"id": "clinic", "label": "診所"},
+    {"id": "note", "label": "便利貼"},
+    {"id": "bowl", "label": "碗"},
+    {"id": "door", "label": "門"},
+    {"id": "search", "label": "搜尋"},
+    {"id": "card", "label": "一張卡"},
+    {"id": "night", "label": "夜"},
+    {"id": "stairs", "label": "樓梯"},
+    {"id": "table", "label": "桌"},
+    {"id": "cage", "label": "籠"}
+  ],
+  "genericWho": ["飼主", "使用者", "所有人", "大家", "寵物主人", "毛孩家長", "主人", "用戶", "鏟屎官"],
+  "timePattern": "點|凌晨|早上|中午|下午|晚上|週|分鐘|小時|清晨|午休|今晚|進門|下班",
+  "placePattern": "室|家|所|診所|路上|床|櫃檯|診|公司|車|公園|籠|桌|椅|地板|浴室|樓梯|玄關|訊息",
+  "widePattern": "全方位|一站式|生態系|管理系統|解決方案|儀表板|大數據|健康管理|完整報告|所有資料|各種",
+  "secondPattern": "、|以及|同時|另外|還有|並且",
+  "medicalAny": "診斷|治療|治癒|處方|確診|保證|會好起來|一定是",
+  "medicalPrevent": "預防.{0,8}(病|癌|腎|心臟|過敏|疾病)",
+  "nicknames": ["匿名水獺", "匿名柴犬", "匿名橘貓", "匿名柯基", "匿名兔子", "匿名倉鼠", "匿名企鵝", "匿名狐狸"],
+  "limits": {
+    "who": [12, 32],
+    "whenWhere": [10, 36],
+    "incident": [8, 80],
+    "behavior": [12, 40],
+    "input": [6, 28],
+    "output": [8, 36],
+    "frame": [8, 36],
+    "shot": [6, 32],
+    "comment": [6, 40],
+    "saw": [6, 40],
+    "feature": [4, 40],
+    "name": [1, 8],
+    "detail": [0, 320]
+  },
+  "detailFields": [
+    {"key": "setting", "label": "在哪個情境", "hint": "這件事出現在誰的生活、什麼場合。"},
+    {"key": "situation", "label": "什麼樣的情況", "hint": "當下碰到什麼，才需要這個。"},
+    {"key": "value", "label": "對主辦方的潛在商業價值", "hint": "主辦方為什麼在意，可能帶來什麼。"},
+    {"key": "appeal", "label": "裁判為什麼會欣賞這個提案", "hint": "評審會看上這一則的理由。"},
+    {"key": "aiFit", "label": "AI 的結合在哪裡", "hint": "人工智慧用在這件事的哪一步。"}
+  ],
+  "fields": {
+    "who": {"lead": "這個人是", "ask": "畫面上的人是哪一種人？", "bad": "飼主", "good": "週五下班才第一次把貓接回家的人"},
+    "when": {"lead": "時間和地點是", "ask": "發生在幾點、什麼地方？", "bad": "在家裡", "good": "週六凌晨 1:10，床邊的地板上"},
+    "incident": {"lead": "剛發生的事是", "ask": "過去十秒裡，發生了哪一件看得到的事？", "bad": "寵物健康管理很重要", "good": "碗是滿的，貓從進門就沒離開床底"},
+    "behavior": {"lead": "他當時正在", "ask": "他此刻實際在做什麼？寫動作，不要寫成抽象的問題。", "bad": "資訊不足所以焦慮", "good": "把「是不是生病」打進手機搜尋框"},
+    "input": {"lead": "他提供的只有", "ask": "如果只能收進一件資料，他放進去的是什麼？", "bad": "所有健康數據", "good": "回家已經幾個小時"},
+    "output": {"lead": "畫面只回他", "ask": "畫面只回他一句什麼？不要回一整份報告。", "bad": "完整健康報告和建議", "good": "時間軸上該不該聯絡獸醫的一句話"}
+  },
+  "frames": [
+    {"ask": "第 1 格：先看到剛發生的事。", "bad": "使用者遇到問題", "good": "床底外有一只滿碗"},
+    {"ask": "第 2 格：看到他現在怎麼處理。", "bad": "他去查別的資料", "good": "手機搜尋框停在那句話"},
+    {"ask": "第 3 格：只出現這個想法的結果。", "bad": "打開 App 首頁和選單", "good": "只剩時間軸上的那一句話"},
+    {"ask": "第 4 格：他接著做的動作。", "bad": "問題被解決了", "good": "人把手機放下，沒有再搜尋"}
+  ],
+  "shotAsk": "用一句話寫這一秒看到什麼。不必再寫「畫面」兩個字。",
+  "shotBad": "展示主要功能",
+  "shotGood": "停在滿著的碗上",
+  "rubric": [
+    {"key": "visual", "label": "畫面", "options": [["0", "我不知道誰在哪裡"], ["1", "知道大致情況，但還能是很多種"], ["2", "我可以指出那一個畫面"]]},
+    {"key": "focus", "label": "焦點", "options": [["0", "這是一個領域，例如健康管理"], ["1", "有一個情境，但還包了好幾件事"], ["2", "只有一件具體的事"]]},
+    {"key": "creative", "label": "創意", "options": [["0", "像健康紀錄、聊天機器人或管理平台"], ["1", "有一點差異，但評審可能看過"], ["2", "這個情境本身就少見"]]},
+    {"key": "demo", "label": "三分鐘", "options": [["0", "要講很多功能才演得完"], ["1", "演得完，但輸入或輸出不只一個"], ["2", "一支手機、一個輸入、一個輸出"]]},
+    {"key": "compliance", "label": "規則", "options": [["0", "聽起來像診斷、治療或取代獸醫"], ["1", "用詞危險，要改才安全"], ["2", "停在照護提醒，沒有寫成診斷"]]}
+  ],
+  "stems": {
+    "wide": "範圍又變大了，因為",
+    "frame": "這一格可以只留",
+    "keep": "我想留下的畫面是"
+  },
+  "phases": [
+    {"id": "collect", "label": "寫想法", "lead": "四個主題都在牆上。每個主題寫一句要做的事，再投票。"},
+    {"id": "score", "label": "互相評分", "lead": "先別加功能。依畫面、是否集中、是否新穎、三分鐘能否講完、以及能不能診斷，告訴隊友還差在哪。"},
+    {"id": "story", "label": "補上畫面", "lead": "還沒畫出使用過程的，畫面分數到不了最高。一次補一格。"},
+    {"id": "mute", "label": "先看圖", "lead": "先把文字遮住。每個人寫下自己看到什麼，再對照原本的句子。"},
+    {"id": "lock", "label": "選定提案", "lead": "只留一則通過的。用不上的功能先記在旁邊，不要加進這則裡。"}
+  ],
+  "meeting": [
+    {"t": "提出想法", "d": "每人最多三則。這一段先不討論要加什麼功能。"},
+    {"t": "互相評分", "d": "不是按讚。分數用來指出範圍太大、看不懂、三分鐘講不完，或寫成了診斷、治療。"},
+    {"t": "補上畫面", "d": "留下的想法補四格使用過程。第三格只能有剛才那個結果。"},
+    {"t": "先看圖", "d": "先看圖、不看字。寫下你看到什麼，再對照作者寫的句子。"},
+    {"t": "選定提案", "d": "只選一則五項都過的。新功能若對不上這四格，先記在旁邊。"}
+  ],
+  "boundaries": [
+    "投稿時要選定四個主題之一，每個主題最多一件。",
+    "作品停在照護提醒：不能診斷、治療、治癒、預防特定疾病，也不能取代獸醫。",
+    "個別化建議和免責句要在同一個畫面，不能只放頁尾或條款。",
+    "初賽繳交提案 PDF，並附上 3 分鐘展示影片連結。",
+    "展示時用虛構的人或動物。真實病歷、收容資料、飼主資料，要有授權才可以用。"
+  ],
+  "schedule": {
+    "title": "徵件時程",
+    "lead": "11/1 開始，12/31 收成簡報和腳本。",
+    "note": "若 11/25 才是繳件日，前一天交粗稿。",
+    "items": [
+      {"date": "11/1–11/8", "text": "發想，鎖定一則。"},
+      {"date": "11/9–11/25", "text": "寫初審簡報，錄一版粗剪。"},
+      {"date": "12/2", "text": "報名步驟一填完。"},
+      {"date": "12/3–12/31", "text": "做成看得到的流程，寫完簡報和腳本。"}
+    ]
+  },
+  "disclaimer": "本作品提供之資訊僅供輔助參考，不能取代獸醫師之診斷、治療或專業建議。貓犬之健康與營養需求可能因個體狀況而異，如有健康疑慮或需要調整飲食與照護方式，請諮詢合格獸醫師。",
+  "example": {
+    "theme": "owner",
+    "who": "週五下班才第一次把貓接回家的人",
+    "whenWhere": "週六凌晨 1:10，床邊的地板上",
+    "incident": "碗是滿的，貓從進門就沒離開床底",
+    "behavior": "把「是不是生病」打進手機搜尋框",
+    "input": "回家已經幾個小時",
+    "output": "時間軸上該不該聯絡獸醫的一句話",
+    "frames": [
+      {"stickers": ["cat", "bed", "bowl"], "line": "床底外有一只滿碗"},
+      {"stickers": ["phone", "search"], "line": "手機搜尋框停在那句話"},
+      {"stickers": ["phone", "card", "clock"], "line": "只剩時間軸上的那一句話"},
+      {"stickers": ["person", "phone", "bed"], "line": "人把手機放下，沒有再搜尋"}
+    ],
+    "shots": ["停在滿著的碗上", "切到他打字的手機", "停在那一句話，他沒有再搜尋"]
+  }
+}

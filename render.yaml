@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: aipets-wall
+    runtime: docker
+    plan: free
+    branch: main
+    healthCheckPath: /api/health
+    envVars:
+      - key: WALL_PASSWORD
+        sync: false
+      - key: WALL_DEPLOY_KEY
+        sync: false
+      - key: WALL_DATA_REPO
+        value: git@github.com:wesleysun0301/aipets-wall.git
+      - key: ROOM_PATH
+        value: /tmp/wall-data/room.json
