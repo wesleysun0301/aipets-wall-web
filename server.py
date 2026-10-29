@@ -35,6 +35,11 @@ NARRATIVE = ["who", "whenWhere", "incident", "behavior", "input", "output"]
 DETAIL = ["setting", "situation", "value", "appeal", "aiFit"]
 ONLINE_SECONDS = 30
 FLUSH_SECONDS = 20
+WEEK_CAP = 12
+LIST_CAP = 40
+WEEK_LABELS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"]
+MEET_KEY = {"task": "tasks", "note": "notes", "decision": "decisions", "todo": "todos"}
+MEET_LIMIT = {"task": 200, "note": 2000, "decision": 200, "todo": 200}
 PRESENCE: dict[str, str] = {}
 PRESENCE_FLUSH_AT = time.monotonic()
 
@@ -59,6 +64,8 @@ def fresh() -> dict:
         "mutes": [],
         "features": [],
         "ratings": [],
+        "weekId": "w1",
+        "weeks": [{"id": "w1", "title": "第一週", "kind": "wall"}],
     }
 
 
@@ -86,9 +93,7 @@ def load() -> dict:
     if not isinstance(base.get("ratings"), list):
         base["ratings"] = []
     drop_ai_proposals(base)
-    if link_ratings_to_votes(base):
-        base["rev"] = int(base.get("rev") or 0) + 1
-        save(base)
+    ensure_weeks(base)
     return base
 
 
@@ -313,8 +318,57 @@ def find_person(state: dict, person_id: str):
     return next((p for p in state["people"] if p["id"] == person_id), None)
 
 
+def find_person_by_name(state: dict, name: str):
+    matches = [person for person in state.get("people") or [] if person.get("name") == name]
+    if len(matches) <= 1:
+        return matches[0] if matches else None
+
+    def progress(person: dict) -> int:
+        pid = person.get("id")
+        ideas = sum(1 for idea in state.get("ideas") or [] if idea.get("authorId") == pid)
+        votes = sum(1 for vote in state.get("votes") or [] if vote.get("voterId") == pid)
+        ratings = sum(1 for item in state.get("ratings") or [] if item.get("voterId") == pid)
+        return ideas + votes + ratings
+
+    matches.sort(key=lambda person: (-progress(person), person.get("joinedAt") or "", person.get("id") or ""))
+    return matches[0]
+
+
 def find_idea(state: dict, idea_id: str):
     return next((i for i in state["ideas"] if i["id"] == idea_id), None)
+
+
+def week_label(n: int) -> str:
+    if 1 <= n <= len(WEEK_LABELS):
+        return "第" + WEEK_LABELS[n - 1] + "週"
+    return "第" + str(n) + "週"
+
+
+def ensure_weeks(state: dict) -> None:
+    weeks = state.get("weeks")
+    if not isinstance(weeks, list) or not weeks:
+        state["weeks"] = [{"id": "w1", "title": "第一週", "kind": "wall"}]
+        state["weekId"] = "w1"
+        return
+    wall_at = next((i for i, week in enumerate(weeks) if isinstance(week, dict) and week.get("kind") == "wall"), None)
+    if wall_at is None:
+        weeks.insert(0, {"id": "w1", "title": "第一週", "kind": "wall"})
+    elif wall_at != 0:
+        weeks.insert(0, weeks.pop(wall_at))
+    for week in weeks:
+        if not isinstance(week, dict) or week.get("kind") != "meeting":
+            continue
+        for key in ("tasks", "notes", "decisions", "todos"):
+            if not isinstance(week.get(key), list):
+                week[key] = []
+    ids = [week.get("id") for week in weeks if isinstance(week, dict)]
+    if state.get("weekId") not in ids:
+        state["weekId"] = weeks[0].get("id") or "w1"
+    state["weeks"] = weeks
+
+
+def find_week(state: dict, week_id: str):
+    return next((week for week in state.get("weeks") or [] if week.get("id") == week_id), None)
 
 
 def require_person(state: dict, body: dict):
@@ -803,24 +857,20 @@ def handle_join(state: dict, body: dict) -> dict:
     name = clean_text(body.get("name"), cat["limits"]["name"][1])
     if len(name) < cat["limits"]["name"][0]:
         raise ValueError("先留一個隊友叫得出來的名字。")
-    pid = str(body.get("personId") or "")
-    if not re.fullmatch(r"[A-Za-z0-9-]{8,64}", pid or ""):
-        pid = uid()
-    person = find_person(state, pid)
-    if not person:
-        person = {
-            "id": pid,
-            "name": name,
-            "color": pick_color(state, body.get("color"), pid),
-            "lastSeen": now_iso(),
-            "joinedAt": now_iso(),
-        }
-        state["people"].append(person)
-        bump(state)
-    else:
-        person["name"] = name
-        if body.get("color"):
-            person["color"] = pick_color(state, body.get("color"), person["id"])
+    person = find_person_by_name(state, name)
+    if person:
+        touch_presence(person["id"])
+        return {"ok": True, "me": person_public(person), "state": view_for(state, person["id"])}
+    pid = uid()
+    person = {
+        "id": pid,
+        "name": name,
+        "color": pick_color(state, body.get("color"), pid),
+        "lastSeen": now_iso(),
+        "joinedAt": now_iso(),
+    }
+    state["people"].append(person)
+    bump(state)
     touch_presence(person["id"])
     return {"ok": True, "me": person_public(person), "state": view_for(state, person["id"])}
 
@@ -930,39 +980,6 @@ def handle_vote(state: dict, body: dict) -> dict:
     return {"ok": True, "state": view_for(state, person["id"])}
 
 
-def link_ratings_to_votes(state: dict) -> bool:
-    votes = state.setdefault("votes", [])
-    have = {(vote.get("ideaId"), vote.get("voterId")) for vote in votes}
-    added = False
-    for rating in state.get("ratings") or []:
-        key = (rating.get("ideaId"), rating.get("voterId"))
-        if not key[0] or not key[1] or key in have:
-            continue
-        idea = find_idea(state, key[0])
-        if not idea or idea.get("authorId") == key[1]:
-            continue
-        person = {"id": key[1]}
-        support_vote(state, idea, person)
-        have.add(key)
-        added = True
-    return added
-
-
-def support_vote(state: dict, idea: dict, person: dict) -> None:
-    if any(vote.get("ideaId") == idea["id"] and vote.get("voterId") == person["id"] for vote in state["votes"]):
-        return
-    state["votes"].append({
-        "ideaId": idea["id"],
-        "voterId": person["id"],
-        "updatedAt": now_iso(),
-        "visual": 1,
-        "focus": 2,
-        "creative": 2,
-        "demo": 2,
-        "compliance": 2,
-    })
-
-
 def handle_unvote(state: dict, body: dict) -> dict:
     person = require_person(state, body)
     idea_id = str(body.get("ideaId") or "")
@@ -1014,7 +1031,6 @@ def handle_rate(state: dict, body: dict) -> dict:
         if not (item.get("ideaId") == idea["id"] and item.get("voterId") == person["id"])
     ]
     state["ratings"].append(rating)
-    support_vote(state, idea, person)
     bump(state)
     return {"ok": True, "state": view_for(state, person["id"])}
 
@@ -1165,6 +1181,94 @@ def handle_restore(state: dict, body: dict) -> dict:
     return {"ok": True, "state": view_for(state, person["id"])}
 
 
+def handle_meeting(state: dict, body: dict) -> dict:
+    person = require_person(state, body)
+    ensure_weeks(state)
+    op = body.get("op")
+    if op == "switch":
+        week = find_week(state, str(body.get("weekId") or ""))
+        if not week:
+            raise ValueError("沒有這一週。")
+        state["weekId"] = week["id"]
+        bump(state)
+        return {"ok": True, "state": view_for(state, person["id"])}
+    if op == "add":
+        if state.get("facilitatorId") != person["id"]:
+            raise ValueError("只有主持人可以加週。")
+        weeks = state["weeks"]
+        if len(weeks) >= WEEK_CAP:
+            raise ValueError("最多十二週。")
+        title = clean_text(body.get("title"), 30) or week_label(len(weeks) + 1)
+        week = {
+            "id": uid(),
+            "title": title,
+            "kind": "meeting",
+            "tasks": [],
+            "notes": [],
+            "decisions": [],
+            "todos": [],
+        }
+        weeks.append(week)
+        state["weekId"] = week["id"]
+        bump(state)
+        return {"ok": True, "state": view_for(state, person["id"])}
+    if op == "rename":
+        if state.get("facilitatorId") != person["id"]:
+            raise ValueError("只有主持人可以改週名。")
+        week = find_week(state, str(body.get("weekId") or ""))
+        if not week or week.get("kind") != "meeting":
+            raise ValueError("這一週不是會議。")
+        title = clean_text(body.get("title"), 30)
+        if not title:
+            raise ValueError("先寫這一週的名稱。")
+        week["title"] = title
+        bump(state)
+        return {"ok": True, "state": view_for(state, person["id"])}
+    key = MEET_KEY.get(op)
+    if not key:
+        raise ValueError("沒有這個動作。")
+    week = find_week(state, str(body.get("weekId") or ""))
+    if not week or week.get("kind") != "meeting":
+        raise ValueError("這一週不是會議。")
+    rows = week.setdefault(key, [])
+    if not isinstance(rows, list):
+        rows = []
+        week[key] = rows
+    item_id = str(body.get("itemId") or "")
+    if body.get("remove"):
+        if state.get("facilitatorId") != person["id"]:
+            raise ValueError("只有主持人可以刪掉。")
+        kept = [row for row in rows if row.get("id") != item_id]
+        if len(kept) == len(rows):
+            raise ValueError("找不到這一列。")
+        week[key] = kept
+        bump(state)
+        return {"ok": True, "state": view_for(state, person["id"])}
+    if item_id:
+        row = next((item for item in rows if item.get("id") == item_id), None)
+        if not row:
+            raise ValueError("找不到這一列。")
+        if key in ("tasks", "todos") and "done" in body:
+            row["done"] = bool(body.get("done"))
+            bump(state)
+            return {"ok": True, "state": view_for(state, person["id"])}
+        raise ValueError("沒有要改的內容。")
+    text = clean_text(body.get("text"), MEET_LIMIT[op])
+    if not text:
+        raise ValueError("先寫一句。")
+    if len(rows) >= LIST_CAP:
+        raise ValueError("這一欄已經四十筆了。")
+    row = {"id": uid(), "text": text}
+    if key in ("notes", "decisions", "todos"):
+        row["authorId"] = person["id"]
+        row["at"] = now_iso()
+    if key in ("tasks", "todos"):
+        row["done"] = False
+    rows.append(row)
+    bump(state)
+    return {"ok": True, "state": view_for(state, person["id"])}
+
+
 def handle_reset(state: dict, body: dict) -> dict:
     person = require_person(state, body)
     if state.get("facilitatorId") != person["id"]:
@@ -1197,6 +1301,7 @@ ROUTES = {
     "/api/park": handle_park,
     "/api/restore": handle_restore,
     "/api/reset": handle_reset,
+    "/api/meeting": handle_meeting,
 }
 
 

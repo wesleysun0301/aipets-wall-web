@@ -41,7 +41,28 @@ p { margin: 0 0 8px; }
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line);
 }
-.topbar { top: 0; display: flex; gap: 16px; justify-content: space-between; align-items: center; }
+.topbar { top: 0; display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+.top-main { display: flex; gap: 16px; justify-content: space-between; align-items: center; }
+.weekbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px; border-radius: 16px;
+  background: var(--red-soft); border: 1px solid #f0c9c6;
+}
+.week-label {
+  padding: 0 4px 0 8px; color: var(--accent); font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
+}
+.weeks { display: flex; flex-wrap: wrap; gap: 6px; }
+.week-tab, .week-add {
+  min-height: 42px; padding: 0 18px; border-radius: 12px;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+}
+.week-tab { border: 1px solid transparent; background: white; color: var(--ink); }
+.week-tab:hover { border-color: #e3b4b1; }
+.week-tab.on { background: var(--accent); color: white; box-shadow: 0 6px 16px rgba(159, 45, 45, 0.22); }
+.week-add {
+  margin-left: auto; border: 1.5px dashed var(--accent); background: white; color: var(--accent);
+}
+.week-add:hover { background: white; border-style: solid; }
 .phasebar {
   top: 69px;
   display: grid;
@@ -103,6 +124,8 @@ p { margin: 0 0 8px; }
   display: inline-flex; align-items: center; gap: 6px;
   padding: 2px 10px 2px 2px; border-radius: 999px; background: var(--soft); font-size: 13px;
 }
+button.person-chip { border: 0; }
+button.person-chip:hover { background: #ece7df; }
 .person-chip.off { opacity: 0.4; }
 .dot {
   width: 28px; height: 28px; border-radius: 50%; color: white;
@@ -128,6 +151,32 @@ p { margin: 0 0 8px; }
 .step.done { background: #ece7df; color: var(--ink); }
 
 .stage { padding: 28px; max-width: 1120px; margin: 0 auto; }
+.meet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+.meet-col { display: grid; gap: 14px; }
+.meet-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+.meet-card h2 { font-size: 18px; margin-bottom: 4px; }
+.meet-rename { display: flex; gap: 8px; align-items: center; margin: 0 0 14px; }
+.meet-add { display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; }
+.meet-field {
+  flex: 1; width: 100%; min-height: 42px; padding: 8px 12px;
+  border-radius: 12px; border: 1px solid var(--line); background: white;
+}
+textarea.meet-field { min-height: 84px; resize: vertical; }
+.meet-item, .meet-line {
+  display: flex; gap: 8px; align-items: flex-start;
+  padding: 8px 0; border-top: 1px solid var(--line);
+}
+.meet-check { display: flex; gap: 8px; align-items: flex-start; flex: 1; cursor: pointer; }
+.meet-item.done .meet-text { color: var(--muted); text-decoration: line-through; }
+.meet-body { flex: 1; min-width: 0; }
+.meet-meta { color: var(--muted); font-size: 12px; }
+.meet-body p { margin: 2px 0 0; white-space: pre-wrap; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
 .card, .spark, .die, .modal, .drawer, .wiz-main, .phone-screen {
   background: var(--card);
@@ -159,7 +208,8 @@ p { margin: 0 0 8px; }
 
 .btn {
   min-height: 42px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line);
-  background: white; transition: background 0.15s ease, border-color 0.15s ease;
+  background: white; white-space: nowrap; flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 .btn:hover { border-color: #cfc6ba; background: var(--soft); }
 .btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
@@ -248,7 +298,7 @@ p { margin: 0 0 8px; }
 .schedule-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 0; }
 .schedule-list li {
   display: grid;
-  grid-template-columns: 8.5em 1fr;
+  grid-template-columns: 4.5em 1fr;
   gap: 12px;
   padding: 10px 0;
   border-top: 1px solid var(--line);
@@ -502,11 +552,14 @@ body.writing .wiz-main {
   .topbar, .phasebar { padding: 14px 16px; }
   .phasebar { display: block; }
   .phase-actions, .actions { margin-top: 10px; }
+  .top-main { align-items: flex-start; }
+  .week-add { margin-left: 0; }
   .wizard, .sparks, .dice, .pair, .io { display: grid; grid-template-columns: 1fr; }
   .wiz-side { position: static; order: 2; }
   .wiz-main { order: 1; }
   .ask, .empty h2 { font-size: 24px; }
   .stage { padding: 16px; }
+  .meet-grid { grid-template-columns: 1fr; }
   .lobby-grid { grid-template-columns: 1fr; }
   .schedule-list li { grid-template-columns: 1fr; gap: 2px; }
   .pitch.tally-card { grid-template-columns: 1fr; }

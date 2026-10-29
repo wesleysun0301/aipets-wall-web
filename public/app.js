@@ -430,11 +430,17 @@ function authHeaders(extra) {
 }
 
 async function api(path, body) {
+  const tokenAtSend = localStorage.getItem("aipets-token") || "";
   const res = await fetch(path, {
     method: "POST",
     headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body || {}),
   });
+  if ((localStorage.getItem("aipets-token") || "") !== tokenAtSend) {
+    const err = new Error("已退出。");
+    err.stale = true;
+    throw err;
+  }
   const data = await res.json().catch(() => ({}));
   if (res.status === 401) {
     localStorage.removeItem("aipets-token");
@@ -554,12 +560,15 @@ function scheduleDraft(idea) {
   if (idea.status === "published" || idea.status === "locked") return;
   clearTimeout(draftTimer);
   draftTimer = setTimeout(() => {
-    draftChain = draftChain.then(() =>
-      api("/api/save", { personId: me.id, mode: "draft", idea }).then((d) => {
+    if (!me) return;
+    draftChain = draftChain.then(() => {
+      if (!me) return null;
+      return api("/api/save", { personId: me.id, mode: "draft", idea }).then((d) => {
+        if (!wizard || !me) return d;
         if (d.ideaId && !idea.id) wizard.idea.id = d.ideaId;
         return d;
-      })
-    );
+      });
+    });
   }, 600);
 }
 
@@ -754,7 +763,7 @@ function nowTask() {
   }
   return {
     title: "先寫一則想法",
-    body: "四個主題都在下面。寫一句要做的事，貼上牆，再投票。",
+    body: "四個主題都在下面。寫一句要做的事，貼上牆，再評分。",
   };
 }
 
@@ -769,13 +778,12 @@ function joinStep(n, label) {
 function renderPassword(root) {
   clear(root);
   const gate = el("div", "gate center");
-  gate.appendChild(el("h1", "", "發想牆"));
-  gate.appendChild(el("p", "quote", "輸入組員密碼才能進入。登錄後寫下的提案會留在這面牆上。"));
-  gate.appendChild(el("label", "field-label", "組員密碼"));
+  gate.appendChild(el("h1", "", "法國皇家 AI for Pets 創新徵件計畫"));
+  gate.appendChild(el("p", "quote", "請輸入密碼以登入"));
   const inp = el("input", "");
   inp.type = "password";
   inp.autocomplete = "current-password";
-  inp.placeholder = "跟組員拿密碼";
+  inp.setAttribute("aria-label", "密碼");
   gate.appendChild(inp);
   const btn = el("button", "btn primary", "登錄");
   async function submit() {
@@ -844,51 +852,65 @@ async function renderJoin(root) {
   flow.appendChild(stepColor);
   flow.appendChild(stepEnter);
   gate.appendChild(flow);
+  const known = new Map();
+  (faces.people || []).forEach((person) => {
+    if (person.name && !known.has(person.name)) known.set(person.name, person);
+  });
   if ((faces.people || []).length) {
     const here = el("div", "join-here");
-    here.appendChild(el("div", "field-label", "已經在裡面"));
+    here.appendChild(el("div", "field-label", "點名稱接回進度"));
     const row = el("div", "people");
     faces.people.forEach((person) => {
-      const chip = el("span", "person-chip");
+      const chip = el("button", "person-chip");
+      chip.type = "button";
       const dot = el("span", "dot");
       dot.style.background = person.color || "#6d6256";
       dot.textContent = (person.name || "?").slice(0, 1);
       chip.appendChild(dot);
       chip.appendChild(el("span", "", person.name || ""));
+      chip.addEventListener("click", () => chooseName(person.name || ""));
       row.appendChild(chip);
     });
     here.appendChild(row);
     gate.appendChild(here);
   }
   gate.appendChild(el("label", "field-label", "選一個暱稱"));
+  gate.appendChild(el("p", "hint", "選之前用過的名稱，會接回那個人的提案、草稿和評分。"));
   const picks = el("div", "nick-picks");
   const inp = el("input", "");
   inp.maxLength = cat.limits.name[1];
   inp.placeholder = "或自己取一個";
   let chosen = "";
+  function chooseName(name) {
+    chosen = name;
+    inp.value = name;
+    picks.querySelectorAll(".nick-pick").forEach((node) => node.classList.toggle("on", node.textContent === name));
+    paintPreview();
+  }
   (faces.nicknames || cat.nicknames || []).forEach((name) => {
     const chip = el("button", "btn tiny nick-pick", name);
     chip.type = "button";
-    chip.addEventListener("click", () => {
-      chosen = name;
-      inp.value = name;
-      picks.querySelectorAll(".nick-pick").forEach((node) => node.classList.toggle("on", node.textContent === name));
-      paintPreview();
-    });
+    chip.addEventListener("click", () => chooseName(name));
     picks.appendChild(chip);
   });
   gate.appendChild(picks);
   gate.appendChild(inp);
-  gate.appendChild(el("label", "field-label", "頭像顏色"));
+  const resumeNote = el("p", "hint", "");
+  resumeNote.hidden = true;
+  gate.appendChild(resumeNote);
+  const colorLabel = el("label", "field-label", "頭像顏色");
+  gate.appendChild(colorLabel);
   const swatches = el("div", "color-picks");
   let color = colors.find((item) => !taken.has(item)) || colors[0] || "";
   colors.forEach((item) => {
     const button = el("button", "color-pick" + (item === color ? " on" : ""));
     button.type = "button";
+    button.dataset.color = item;
     button.style.background = item;
     button.disabled = taken.has(item);
     button.title = taken.has(item) ? "這個顏色已經有人用了" : "選這個顏色";
     button.addEventListener("click", () => {
+      if (known.get(inp.value.trim())) return;
       color = item;
       swatches.querySelectorAll(".color-pick").forEach((node) => node.classList.toggle("on", node === button));
       paintPreview();
@@ -903,10 +925,25 @@ async function renderJoin(root) {
   preview.appendChild(previewName);
   gate.appendChild(preview);
   function paintPreview() {
+    const person = known.get(inp.value.trim());
+    if (person && person.color) color = person.color;
+    else if (taken.has(color)) color = colors.find((item) => !taken.has(item)) || "";
     const name = (inp.value || chosen || "你").trim();
     previewDot.style.background = color || "#6d6256";
     previewDot.textContent = name.slice(0, 1) || "你";
     previewName.textContent = name || "你的頭像";
+    swatches.querySelectorAll(".color-pick").forEach((node) => {
+      const item = node.dataset.color;
+      const mine = !!(person && item === person.color);
+      node.disabled = person ? !mine : taken.has(item);
+      node.classList.toggle("on", person ? mine : item === color);
+      node.title = person
+        ? (mine ? "沿用之前的頭像顏色" : "找回這個名稱時，頭像顏色沿用")
+        : (taken.has(item) ? "這個顏色已經有人用了" : "選這個顏色");
+    });
+    colorLabel.textContent = person ? "沿用之前的頭像顏色" : "頭像顏色";
+    resumeNote.hidden = !person;
+    resumeNote.textContent = person ? "會接回這個名稱的提案、草稿和評分。" : "";
   }
   inp.addEventListener("input", () => {
     picks.querySelectorAll(".nick-pick").forEach((node) => node.classList.toggle("on", node.textContent === inp.value.trim()));
@@ -945,6 +982,41 @@ async function renderJoin(root) {
   root.appendChild(gate);
 }
 
+function weekList() {
+  return (state && state.weeks) || [];
+}
+
+function currentWeek() {
+  const weeks = weekList();
+  return weeks.find((week) => week.id === state.weekId) || weeks[0] || null;
+}
+
+function onWallWeek() {
+  return !currentWeek() || currentWeek().kind !== "meeting";
+}
+
+function meetCopy() {
+  return (cat && cat.meeting) || {};
+}
+
+async function meetOp(op, extra) {
+  try {
+    await api("/api/meeting", Object.assign({ personId: me.id, op }, extra || {}));
+    renderAll();
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+async function goWeek(weekId) {
+  if (!state || state.weekId === weekId) return;
+  if (wizard) closeWizard();
+  if (detailEl) closeDetail();
+  closeModal();
+  if (drawerEl) closeDrawer();
+  await meetOp("switch", { weekId });
+}
+
 function renderHeader() {
   let top = $(".topbar");
   if (!top) {
@@ -952,22 +1024,26 @@ function renderHeader() {
     $("#app").prepend(top);
   }
   clear(top);
+  const week = currentWeek();
+  const wall = onWallWeek();
   const brand = el("div", "brand");
   brand.appendChild(el("div", "mark"));
   const titles = el("div", "");
-  titles.appendChild(el("h1", "", "發想牆"));
-  titles.appendChild(el("p", "", "四個主題，貼提案、一起投票"));
+  titles.appendChild(el("h1", "", wall ? "發想牆" : (week && week.title) || "會議"));
+  titles.appendChild(el("p", "", wall ? "四個主題，貼提案、一起評分" : (meetCopy().subtitle || "本週應完成、會議紀錄、決定與待辦")));
   brand.appendChild(titles);
-  top.appendChild(brand);
+  document.title = wall ? "發想牆" : ((week && week.title) || "會議");
 
   const actions = el("div", "actions");
-  const inTally = viewMode === "tally";
-  const room = el("button", "btn tiny" + (inTally ? " primary" : ""), inTally ? (openTheme ? "回到主題" : "回到大廳") : "投票室");
-  room.addEventListener("click", () => {
-    viewMode = inTally ? "wall" : "tally";
-    renderAll();
-  });
-  actions.appendChild(room);
+  if (wall) {
+    const inTally = viewMode === "tally";
+    const room = el("button", "btn tiny" + (inTally ? " primary" : ""), inTally ? (openTheme ? "回到主題" : "回到大廳") : "評分室");
+    room.addEventListener("click", () => {
+      viewMode = inTally ? "wall" : "tally";
+      renderAll();
+    });
+    actions.appendChild(room);
+  }
   const rules = el("button", "btn tiny", "競賽規則");
   rules.addEventListener("click", () => openListModal("競賽規則", cat.boundaries));
   actions.appendChild(rules);
@@ -997,11 +1073,83 @@ function renderHeader() {
   actions.appendChild(copy);
   const right = el("div", "top-right");
   right.appendChild(actions);
-  top.appendChild(right);
+  const main = el("div", "top-main");
+  main.appendChild(brand);
+  main.appendChild(right);
+  top.appendChild(main);
+
+  const bar = el("div", "weekbar");
+  bar.appendChild(el("span", "week-label", "週次"));
+  const weeks = el("div", "weeks");
+  weekList().forEach((item) => {
+    const on = item.id === state.weekId;
+    const btn = el("button", "week-tab" + (on ? " on" : ""), item.title || "週次");
+    btn.type = "button";
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.addEventListener("click", () => goWeek(item.id));
+    weeks.appendChild(btn);
+  });
+  bar.appendChild(weeks);
+  if (me && state.facilitatorId === me.id && weekList().length < 12) {
+    const add = el("button", "week-add", meetCopy().addWeek || "加下一週");
+    add.type = "button";
+    add.addEventListener("click", () => meetOp("add"));
+    bar.appendChild(add);
+  }
+  top.appendChild(bar);
 
   const people = el("div", "people");
   right.appendChild(people);
+  const leave = el("button", "btn tiny danger", "退出");
+  leave.type = "button";
+  leave.title = "退出後要重新輸入組員密碼";
+  leave.addEventListener("click", openSignOut);
+  right.appendChild(leave);
   updatePeopleDots();
+}
+
+function openSignOut() {
+  const box = el("div", "");
+  box.appendChild(el("h2", "", "退出發想牆"));
+  box.appendChild(el("p", "", "這台電腦要重新輸入組員密碼才能再進來。牆上的提案會留著。"));
+  const row = el("div", "row");
+  const stay = el("button", "btn tiny", "再留一下");
+  stay.type = "button";
+  stay.addEventListener("click", closeModal);
+  const go = el("button", "btn tiny danger", "退出");
+  go.type = "button";
+  go.addEventListener("click", signOut);
+  row.appendChild(stay);
+  row.appendChild(go);
+  box.appendChild(row);
+  mountModal().appendChild(box);
+}
+
+function signOut() {
+  clearInterval(pollTimer);
+  pollTimer = null;
+  clearTimeout(draftTimer);
+  draftTimer = null;
+  localStorage.removeItem("aipets-token");
+  localStorage.removeItem("aipets-name");
+  localStorage.removeItem("aipets-id");
+  document.body.classList.remove("writing");
+  document.querySelectorAll(".shade").forEach((node) => node.remove());
+  wizard = null;
+  draftChain = Promise.resolve();
+  drawerEl = null;
+  detailEl = null;
+  modalEl = null;
+  rulesOpen = false;
+  renderLater = false;
+  selectedId = null;
+  sparkHoverId = null;
+  openTheme = "";
+  viewMode = "wall";
+  me = null;
+  state = null;
+  rev = 0;
+  renderPassword($("#app"));
 }
 
 function updatePeopleDots() {
@@ -1182,20 +1330,6 @@ function authorBadge(idea) {
   return badge;
 }
 
-function castVote(idea, event) {
-  event.stopPropagation();
-  api("/api/vote", {
-    personId: me.id,
-    ideaId: idea.id,
-    scores: { visual: 1, focus: 2, creative: 2, demo: 2, compliance: 2 },
-  }).catch((err) => toast(err.message));
-}
-
-function unvote(idea, event) {
-  event.stopPropagation();
-  api("/api/unvote", { personId: me.id, ideaId: idea.id }).catch((err) => toast(err.message));
-}
-
 function voterLabel(voterId) {
   const person = personById(voterId);
   const name = (person && person.name) || "已離開的人";
@@ -1203,18 +1337,18 @@ function voterLabel(voterId) {
 }
 
 function appendRoster(card, idea) {
-  const votes = votesFor(idea.id, idea.authorId);
+  const ratings = ratingsFor(idea);
   const box = el("div", "roster");
-  box.appendChild(el("div", "field-label", votes.length ? "投了這則" : "還沒有人投這則"));
-  if (!votes.length) {
+  box.appendChild(el("div", "field-label", ratings.length ? "評了這則" : "還沒有人評這則"));
+  if (!ratings.length) {
     card.appendChild(box);
     return;
   }
   const names = el("div", "roster-names");
-  votes.forEach((vote) => {
-    const mean = personMean(idea, vote.voterId);
-    const text = voterLabel(vote.voterId) + (mean == null ? " · 未評" : " · " + formatScore(mean) + " 分");
-    names.appendChild(el("span", "voter" + (vote.voterId === me.id ? " mine" : ""), text));
+  ratings.forEach((item) => {
+    const mean = personMean(idea, item.voterId);
+    const text = voterLabel(item.voterId) + (mean == null ? "" : " · " + formatScore(mean) + " 分");
+    names.appendChild(el("span", "voter" + (item.voterId === me.id ? " mine" : ""), text));
   });
   box.appendChild(names);
   card.appendChild(box);
@@ -1238,12 +1372,6 @@ function buildPitchCard(idea) {
     card.appendChild(meta);
   }
   const actions = el("div", "row");
-  if (idea.authorId !== me.id && idea.status !== "locked") {
-    const voted = myVote(idea.id);
-    const vote = el("button", "btn tiny" + (voted ? "" : " primary"), voted ? "取消我的票" : "投這則");
-    vote.addEventListener("click", (event) => (voted ? unvote(idea, event) : castVote(idea, event)));
-    actions.appendChild(vote);
-  }
   const detail = el("button", "btn tiny", "詳細資訊");
   detail.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -1438,7 +1566,7 @@ function renderLobby(stage) {
   renderPrivateStrip(stage);
   const intro = el("div", "board-intro");
   intro.appendChild(el("h2", "", "選一個主題"));
-  intro.appendChild(el("p", "", "點進去看提案、寫一句。投票室看哪幾件比較熱門。"));
+  intro.appendChild(el("p", "", "點進主題看提案，也可以自己寫一句。哪幾件平均分比較高，到評分室看。"));
   const official = el("p", "lobby-official");
   official.appendChild(document.createTextNode("徵件頁 "));
   const link = el("a", "lobby-link", "https://bhuntr.com/tw/competitions/AIforPets");
@@ -1466,15 +1594,15 @@ function renderLobby(stage) {
     grid.appendChild(door);
   });
   stage.appendChild(grid);
-  const vote = el("button", "door vote");
-  vote.type = "button";
-  vote.appendChild(el("h3", "", "投票室"));
-  vote.appendChild(el("p", "", "看熱門排行，也可以改投。"));
-  vote.addEventListener("click", () => {
+  const rank = el("button", "door vote");
+  rank.type = "button";
+  rank.appendChild(el("h3", "", "評分室"));
+  rank.appendChild(el("p", "", "看平均分排行，也可以改自己的分數。"));
+  rank.addEventListener("click", () => {
     viewMode = "tally";
     renderAll();
   });
-  stage.appendChild(vote);
+  stage.appendChild(rank);
 }
 
 function renderWall(stage) {
@@ -1512,8 +1640,8 @@ function renderWall(stage) {
   const area = el("textarea", "");
   area.rows = 2;
   area.maxLength = cat.limits.incident[1];
-  area.placeholder = "這個主題，你們想做的是什麼？寫一句。";
-  const post = el("button", "btn primary", "加到這個主題");
+  area.placeholder = "這個主題想做什麼？用一句話寫下來。";
+  const post = el("button", "btn primary", "貼上這一句");
   post.addEventListener("click", () => postThemeIdea(theme.id, area.value));
   box.appendChild(area);
   box.appendChild(post);
@@ -1585,10 +1713,6 @@ function renderPinbar(stage) {
   stage.appendChild(bar);
 }
 
-function voteTotal(idea) {
-  return votesFor(idea.id, idea.authorId).length;
-}
-
 function ratingsFor(idea) {
   return (state.ratings || []).filter((item) => item.ideaId === idea.id && item.voterId !== idea.authorId);
 }
@@ -1598,8 +1722,8 @@ function scoreAverage(idea) {
 }
 
 function linkedAverage(idea) {
-  const means = votesFor(idea.id, idea.authorId)
-    .map((vote) => personMean(idea, vote.voterId))
+  const means = ratingsFor(idea)
+    .map((item) => personMean(idea, item.voterId))
     .filter((n) => n != null);
   if (!means.length) return null;
   return means.reduce((sum, n) => sum + n, 0) / means.length;
@@ -1614,7 +1738,7 @@ function personMean(idea, voterId) {
 }
 
 function heatScore(idea) {
-  return voteTotal(idea) + (linkedAverage(idea) || 0);
+  return linkedAverage(idea) || 0;
 }
 
 function heatKey(idea) {
@@ -1622,12 +1746,10 @@ function heatKey(idea) {
 }
 
 function heatLine(idea) {
-  const votes = voteTotal(idea);
+  const count = ratingsFor(idea).length;
   const avg = linkedAverage(idea);
-  const score = formatScore(heatScore(idea));
-  if (!votes) return "熱門 " + score;
-  if (avg == null) return "熱門 " + score + " · " + votes + " 票 · 還沒有人評分";
-  return "熱門 " + score + " · " + votes + " 票 + 平均 " + formatScore(avg) + " 分";
+  if (!count || avg == null) return "還沒有人評分";
+  return "平均 " + formatScore(avg) + " · " + count + " 人評過";
 }
 
 function rankWord(n) {
@@ -1648,6 +1770,10 @@ function formatScore(n) {
   return (Math.round(n * 10) / 10).toFixed(1);
 }
 
+function detailWritten(idea) {
+  return detailFields().some(([key]) => String(idea[key] || "").trim());
+}
+
 function scoreFields(idea) {
   const rows = [];
   if (String(idea.incident || "").trim()) rows.push(["incident", "這一則要做什麼"]);
@@ -1660,7 +1786,9 @@ function scoreFields(idea) {
 function appendScore(box, idea) {
   const fields = scoreFields(idea);
   const block = el("div", "score-block");
-  block.appendChild(el("h3", "", "依詳細資訊評分"));
+  const written = detailWritten(idea);
+  const mine = idea.authorId === me.id;
+  block.appendChild(el("h3", "", mine || written ? "依詳細資訊評分" : "先評牆上這一句"));
   if (!fields.length) {
     block.appendChild(el("p", "muted", "詳細資訊還沒寫，還不能評。"));
     box.appendChild(block);
@@ -1668,7 +1796,7 @@ function appendScore(box, idea) {
   }
   const avg = scoreAverage(idea);
   const count = ratingsFor(idea).length;
-  if (idea.authorId === me.id) {
+  if (mine) {
     block.appendChild(el("p", "muted", avg == null ? "還沒有人評。自己的不能自己評。" : "平均 " + formatScore(avg) + " 分，" + count + " 人評過。自己的不能自己評。"));
     fields.forEach(([key, label]) => {
       const part = fieldAverage(idea, key);
@@ -1677,7 +1805,10 @@ function appendScore(box, idea) {
     box.appendChild(block);
     return;
   }
-  block.appendChild(el("p", "muted", (avg == null ? "看上面寫的內容，每一段選 1 到 5 分。" : "目前平均 " + formatScore(avg) + " 分，" + count + " 人評過。") + "送出後，這一則也算你的一票。"));
+  const lead = written
+    ? (avg == null ? "看上面寫的內容，每一段選 1 到 5 分。" : "目前平均 " + formatScore(avg) + " 分，" + count + " 人評過。")
+    : (avg == null ? "提案者還沒寫詳細資訊。先看上面這一句，選 1 到 5 分。" : "提案者還沒寫詳細資訊。目前平均 " + formatScore(avg) + " 分，" + count + " 人評過。");
+  block.appendChild(el("p", "muted", lead));
   const existing = (state.ratings || []).find((item) => item.ideaId === idea.id && item.voterId === me.id);
   const picks = {};
   fields.forEach(([key, label]) => {
@@ -1703,12 +1834,12 @@ function appendScore(box, idea) {
   const send = el("button", "btn primary", existing ? "改評分" : "送出評分");
   send.addEventListener("click", async () => {
     if (fields.some(([key]) => picks[key] == null)) {
-      toast("每一段都要選 1 到 5 分。");
+      toast(written ? "每一段都要選 1 到 5 分。" : "這一則要選 1 到 5 分。");
       return;
     }
     try {
       await api("/api/rate", { personId: me.id, ideaId: idea.id, scores: picks });
-      toast("已評分，這一則也算你的一票");
+      toast("已評分");
       openDetail(idea.id);
     } catch (err) {
       toast(err.message);
@@ -1726,20 +1857,19 @@ function heatStat(label, value, hot) {
 }
 
 function appendHeat(card, idea) {
-  const votes = voteTotal(idea);
+  const count = ratingsFor(idea).length;
   const avg = linkedAverage(idea);
   const stats = el("div", "heat-stats");
-  stats.appendChild(heatStat("熱門", formatScore(heatScore(idea)), true));
-  stats.appendChild(heatStat("票數", String(votes), false));
-  stats.appendChild(heatStat("平均", avg == null ? "未評" : formatScore(avg), false));
+  stats.appendChild(heatStat("平均", avg == null ? "未評" : formatScore(avg), true));
+  stats.appendChild(heatStat("人數", String(count), false));
   card.appendChild(stats);
 }
 
 function renderTally(stage) {
   const ideas = wallIdeas();
   const head = el("div", "board-intro");
-  head.appendChild(el("h2", "", "投票室"));
-  head.appendChild(el("p", "", "依熱門分排列。熱門分是票數加上平均分，一樣就並列。"));
+  head.appendChild(el("h2", "", "評分室"));
+  head.appendChild(el("p", "", "依平均分排列。平均一樣時，評的人比較多的在前，再一樣就並列。"));
   stage.appendChild(head);
   if (!ideas.length) {
     stage.appendChild(el("p", "muted", "牆上還沒有提案。"));
@@ -1748,11 +1878,11 @@ function renderTally(stage) {
   const best = Math.max(...ideas.map((idea) => heatKey(idea)));
   const leaders = ideas.filter((idea) => heatKey(idea) === best).sort(byCreated);
   if (best <= 0) {
-    stage.appendChild(el("p", "tally-note", "還沒有人投票或評分。可以在下面投一則，或打開詳細資訊評 1 到 5 分。"));
+    stage.appendChild(el("p", "tally-note", "還沒有人評分。打開詳細資訊，選 1 到 5 分。"));
   } else if (leaders.length > 1) {
-    stage.appendChild(el("p", "tally-note", "並列第一名：" + leaders.map(proposalMark).join("、") + "。熱門 " + formatScore(heatScore(leaders[0])) + "。"));
+    stage.appendChild(el("p", "tally-note", "並列第一名：" + leaders.map(proposalMark).join("、") + "。平均 " + formatScore(heatScore(leaders[0])) + "。"));
   }
-  const ranked = ideas.slice().sort((a, b) => heatKey(b) - heatKey(a) || voteTotal(b) - voteTotal(a) || byCreated(a, b));
+  const ranked = ideas.slice().sort((a, b) => heatKey(b) - heatKey(a) || ratingsFor(b).length - ratingsFor(a).length || byCreated(a, b));
   const crowd = {};
   ranked.forEach((idea) => {
     const key = heatKey(idea);
@@ -1776,6 +1906,148 @@ function renderTally(stage) {
   });
 }
 
+function personName(id) {
+  const person = personById(id);
+  return person ? person.name : "有人";
+}
+
+function meetWhen(iso) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function meetComposer(week, op, placeholder, multiline) {
+  const form = el("form", "meet-add");
+  const field = el(multiline ? "textarea" : "input", "meet-field");
+  if (!multiline) field.type = "text";
+  field.maxLength = multiline ? 2000 : 200;
+  field.placeholder = placeholder;
+  field.setAttribute("aria-label", placeholder);
+  const btn = el("button", "btn tiny primary", meetCopy().add || "加上");
+  btn.type = "submit";
+  form.appendChild(field);
+  form.appendChild(btn);
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = field.value.trim();
+    if (!text) return;
+    meetOp(op, { weekId: week.id, text });
+  });
+  return form;
+}
+
+function meetRemove(week, op, item) {
+  if (!me || state.facilitatorId !== me.id) return null;
+  const del = el("button", "btn tiny danger", meetCopy().remove || "刪掉");
+  del.type = "button";
+  del.addEventListener("click", () => meetOp(op, { weekId: week.id, itemId: item.id, remove: true }));
+  return del;
+}
+
+function renderMeetChecks(week, op, items) {
+  const list = el("div", "meet-list");
+  items.forEach((item) => {
+    const row = el("div", "meet-item" + (item.done ? " done" : ""));
+    const label = el("label", "meet-check");
+    const box = el("input", "");
+    box.type = "checkbox";
+    box.checked = !!item.done;
+    box.addEventListener("change", () => meetOp(op, { weekId: week.id, itemId: item.id, done: box.checked }));
+    label.appendChild(box);
+    label.appendChild(el("span", "meet-text", item.text || ""));
+    row.appendChild(label);
+    const del = meetRemove(week, op, item);
+    if (del) row.appendChild(del);
+    list.appendChild(row);
+  });
+  return list;
+}
+
+function renderMeetLines(week, op, items) {
+  const list = el("div", "meet-list");
+  items.forEach((item) => {
+    const row = el("div", "meet-line");
+    const body = el("div", "meet-body");
+    const meta = personName(item.authorId) + (item.at ? " · " + meetWhen(item.at) : "");
+    body.appendChild(el("div", "meet-meta", meta));
+    body.appendChild(el("p", "", item.text || ""));
+    row.appendChild(body);
+    const del = meetRemove(week, op, item);
+    if (del) row.appendChild(del);
+    list.appendChild(row);
+  });
+  return list;
+}
+
+function renderMeetCard(title, empty, body, composer) {
+  const card = el("section", "meet-card");
+  card.appendChild(el("h2", "", title));
+  if (body) card.appendChild(body);
+  if (empty) card.appendChild(el("p", "muted", empty));
+  if (composer) card.appendChild(composer);
+  return card;
+}
+
+function renderMeeting(stage, week) {
+  const copy = meetCopy();
+  if (me && state.facilitatorId === me.id) {
+    const form = el("form", "meet-rename");
+    const field = el("input", "meet-field");
+    field.type = "text";
+    field.maxLength = 30;
+    field.value = week.title || "";
+    field.placeholder = copy.renamePlaceholder || "這一週的名稱";
+    field.setAttribute("aria-label", copy.renamePlaceholder || "這一週的名稱");
+    const btn = el("button", "btn tiny", copy.rename || "改週名");
+    btn.type = "submit";
+    form.appendChild(field);
+    form.appendChild(btn);
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const title = field.value.trim();
+      if (!title || title === week.title) return;
+      meetOp("rename", { weekId: week.id, title });
+    });
+    stage.appendChild(form);
+  }
+  const tasks = week.tasks || [];
+  const notes = week.notes || [];
+  const decisions = week.decisions || [];
+  const todos = week.todos || [];
+  const grid = el("div", "meet-grid");
+  const left = el("div", "meet-col");
+  const right = el("div", "meet-col");
+  left.appendChild(renderMeetCard(
+    copy.tasks || "本週應完成",
+    tasks.length ? "" : (copy.emptyTasks || "這一週還沒寫應完成的進度。"),
+    tasks.length ? renderMeetChecks(week, "task", tasks) : null,
+    meetComposer(week, "task", copy.taskPlaceholder || "這一週要完成的一項", false)
+  ));
+  left.appendChild(renderMeetCard(
+    copy.todos || "待辦",
+    todos.length ? "" : (copy.emptyTodos || "還沒有待辦。"),
+    todos.length ? renderMeetChecks(week, "todo", todos) : null,
+    meetComposer(week, "todo", copy.todoPlaceholder || "會後要做的一件事", false)
+  ));
+  right.appendChild(renderMeetCard(
+    copy.notes || "會議紀錄",
+    notes.length ? "" : (copy.emptyNotes || "還沒有會議紀錄。"),
+    notes.length ? renderMeetLines(week, "note", notes) : null,
+    meetComposer(week, "note", copy.notePlaceholder || "記下剛才說的", true)
+  ));
+  right.appendChild(renderMeetCard(
+    copy.decisions || "決定",
+    decisions.length ? "" : (copy.emptyDecisions || "還沒有決定。"),
+    decisions.length ? renderMeetLines(week, "decision", decisions) : null,
+    meetComposer(week, "decision", copy.decisionPlaceholder || "這一項決定是", false)
+  ));
+  grid.appendChild(left);
+  grid.appendChild(right);
+  stage.appendChild(grid);
+}
+
 function renderStage() {
   if (wizard) return;
   let stage = $(".stage");
@@ -1784,7 +2056,9 @@ function renderStage() {
     $("#app").appendChild(stage);
   }
   clear(stage);
-  if (viewMode === "park") renderPark(stage);
+  const week = currentWeek();
+  if (week && week.kind === "meeting") renderMeeting(stage, week);
+  else if (viewMode === "park") renderPark(stage);
   else if (viewMode === "tally") renderTally(stage);
   else renderWall(stage);
 }
@@ -2812,6 +3086,7 @@ async function pulseOnce() {
   try {
     await api("/api/pulse", { personId: me.id, rev });
   } catch (e) {
+    if (e.stale) return;
     if (e.login) {
       me = null;
       clearInterval(pollTimer);
